@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#151b23"><title>Tender Workbench</title><link rel="stylesheet" href="/static/styles.css"></head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<aside class="rail">
+  <a class="brand" href="/">Tender<span>Workbench</span></a>
+  <p class="rail-label">HEALTH COMMODITIES</p>
+  <label class="small" for="case-picker">Review case</label><select id="case-picker"><option value="">Choose a case</option></select>
+  <nav aria-label="Workspace"><button data-view="overview" class="selected"><span>01</span>Case files</button><button data-view="plan"><span>02</span>Evaluation plan</button><button data-view="matrix"><span>03</span>Compliance matrix</button><button data-view="prices"><span>04</span>Price checks</button><button data-view="queue"><span>05</span>Review queue</button><button data-view="audit"><span>06</span>Audit trail</button></nav>
+  <div class="rail-bottom"><span class="local-dot"></span> LOCAL WORKSPACE<p>Unsigned drafts.<br>Human decisions.</p><button id="new-case" class="secondary inverse">Create a case</button></div>
+</aside>
+<div class="workspace">
+<header class="topbar"><span>Governance / Health &amp; life sciences</span><span class="pill">Committee review</span></header>
+<main id="main" tabindex="-1">
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <div class="page-head"><div><p class="eyebrow" id="case-meta">EVALUATION WORKSPACE</p><h1 id="page-title">Evidence before decisions.</h1><p id="page-description">Review the published criteria, trace the evidence, and prepare an unsigned committee file.</p></div><div id="primary-actions"></div></div>
+  <div id="progress" hidden></div>
+  <section id="content" aria-label="Workspace content"></section>
+</main>
+<footer><span>Every finding needs a source.</span><span>Health Commodity Tender Evaluation Workbench · v0.1</span></footer>
+</div>
+<dialog id="source-dialog" aria-labelledby="source-heading"><div class="dialog-head"><h2 id="source-heading">Source evidence</h2><button class="secondary" data-close="source-dialog">Close</button></div><div id="source-content"></div></dialog>
+<dialog id="approval-dialog" aria-labelledby="approval-heading"><div class="dialog-head"><h2 id="approval-heading">Named reviewer approval</h2><button class="secondary" data-close="approval-dialog">Close</button></div><form id="approval-form"><p id="approval-description"></p><label for="reviewer">Reviewer name</label><input id="reviewer" required minlength="2" maxlength="100" autocomplete="name"><label for="review-note">Review note <span class="muted">(optional)</span></label><textarea id="review-note" rows="3" maxlength="2000"></textarea><label class="check"><input id="approval-confirm" type="checkbox" required><span id="approval-confirm-text">I have reviewed this version and approve this action.</span></label><p class="small mono" id="approval-digest"></p><button class="primary" type="submit" id="approval-submit">Confirm approval</button></form></dialog>
+<dialog id="create-dialog" aria-labelledby="create-heading"><div class="dialog-head"><h2 id="create-heading">Create a closed-tender case</h2><button class="secondary" data-close="create-dialog">Close</button></div><form id="create-form"><div class="form-grid"><div><label for="case-name">Case name</label><input id="case-name" required maxlength="150"></div><div><label for="operator">Operator name</label><input id="operator" required minlength="2" maxlength="100"></div><div><label for="closed-on">Closing date</label><input id="closed-on" type="date" required></div><div><label for="closure-source">Closure evidence URL or note</label><input id="closure-source" required></div></div><label for="tender-file">Tender document</label><input id="tender-file" type="file" required accept=".pdf,.json,.txt,.md"><label for="addendum-files">Applicable addenda and clarifications</label><input id="addendum-files" type="file" multiple accept=".pdf,.json,.txt,.md"><fieldset><legend>Synthetic bids</legend><p class="small">Each group is a separate synthetic bidder. No real unpublished bids.</p><label for="bid-a">Bidder A files</label><input id="bid-a" type="file" required multiple accept=".pdf,.json,.txt,.md"><label for="bid-b">Bidder B files (optional)</label><input id="bid-b" type="file" multiple accept=".pdf,.json,.txt,.md"><label for="bid-c">Bidder C files (optional)</label><input id="bid-c" type="file" multiple accept=".pdf,.json,.txt,.md"></fieldset><label class="check"><input id="synthetic-confirm" type="checkbox" required><span>I confirm the tender is closed and all bid documents are synthetic and contain no personal details.</span></label><button class="primary" type="submit">Register documents</button></form></dialog>
+<script src="/static/app.js" defer></script>
+</body></html>

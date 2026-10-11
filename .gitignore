@@ -1,0 +1,34 @@
+# Project-local environments and generated files
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+dist/
+build/
+*.egg-info/
+
+# Local credentials and machine settings
+.env
+.env.*
+!.env.example
+
+# Case inputs and outputs can contain restricted material
+outputs/*
+!outputs/.gitkeep
+local_data/
+models/
+.runtime/
+.tastemaker/
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Local editor settings
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store

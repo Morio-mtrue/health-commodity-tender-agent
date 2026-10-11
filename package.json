@@ -1,0 +1,6 @@
+{
+  "name": "health-tender-mcp-dependencies",
+  "private": true,
+  "description": "Borrowed official Filesystem MCP server for local case-scoped reads",
+  "dependencies": {"@modelcontextprotocol/server-filesystem": "1.0.0"}
+}
