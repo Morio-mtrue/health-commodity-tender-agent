@@ -1,6 +1,6 @@
 # Implementation backlog
 
-**Current phase: implemented synthetic MVP with passing core and real MCP integration checks.** The user waived the build-window prerequisite. This backlog preserves the intended sequence; README.md and EVALS.md identify what actually works and what remains incomplete. Public corpus retrieval, local model runs, OCR, verified external records, and submission artifacts remain outstanding.
+**Current phase: synthetic MVP with passing core, real MCP, and local open-model checks.** The user waived the build-window prerequisite. The public MIT repository is created. This backlog preserves the intended sequence; README.md and EVALS.md distinguish observed behavior from unfinished scope. Public corpus retrieval, practitioner and human review, OCR, verified external records, a stronger-model comparison, and the public video remain outstanding.
 
 ## 1. Corpus and environment
 

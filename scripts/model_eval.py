@@ -4,6 +4,8 @@ import asyncio
 import base64
 import json
 import time
+import os
+import httpx
 from pathlib import Path
 from mcp_server.service import ProcurementService
 from orchestrator.mcp_client import procurement
@@ -12,17 +14,34 @@ from orchestrator.workflow import Workflow
 from sample_case.fixture import request
 
 
-async def main(repeats):
+def native_tender_payload(operator):
+    payload=request(operator)
+    for doc in payload["documents"]:
+        if doc["kind"]=="bid":
+            continue
+        rules=json.loads(base64.b64decode(doc["content_base64"]))["criteria"]
+        text="ORIGINAL SYNTHETIC DEMONSTRATION - PUBLISHED EVALUATION REQUIREMENTS\n"
+        text+="\n".join(f"{c['id']} ({c['stage']}) {c['wording']}" for c in rules)
+        doc.update(name=doc["name"].replace(".json",".txt"),content_base64=base64.b64encode(text.encode()).decode())
+    return payload
+
+
+async def main(repeats,model,native_text=False,append=False):
     store=Store("outputs/model-evaluation")
     service=ProcurementService(store)
-    results=[]
+    result_file=Path("outputs/model-evaluation-result.json")
+    results=json.loads(result_file.read_text(encoding="utf-8")) if append and result_file.exists() else []
     payload=request("MODEL TEST OPERATOR")
     gold={item["wording"] for doc in payload["documents"] if doc["kind"]!="bid"
           for item in json.loads(base64.b64decode(doc["content_base64"]))["criteria"]}
-    model="qwen2.5-1.5b-instruct-q4_k_m.gguf"
+    gold_by_id={item["id"]:(item["wording"],f"doc_{index+1:03d}")
+                for index,doc in enumerate(payload["documents"]) if doc["kind"]!="bid"
+                for item in json.loads(base64.b64decode(doc["content_base64"]))["criteria"]}
+    if native_text:
+        payload=native_tender_payload("MODEL TEST OPERATOR")
     for index in range(repeats):
         tick=time.monotonic()
-        row={"run":index+1,"timestamp":now(),"approval_type":"TEST SIMULATION", "model":model}
+        row={"run":len(results)+1,"timestamp":now(),"approval_type":"TEST SIMULATION", "model":model}
         case=await procurement(store,"register_case",{"request":payload})
         row["case_id"]=case["id"]
         try:
@@ -33,6 +52,21 @@ async def main(repeats):
                        criterion_recall=len(extracted&gold)/len(gold),
                        exact_gold_precision=len(extracted&gold)/len(extracted),
                        citation_accuracy=1.0,extracted_wording=sorted(extracted),model_metadata=case.get("model_run"))
+            criteria={c["id"]:c for c in case["plan"]["criteria"]}
+            source_span_matches=sum(1 for c in criteria.values() if c["id"] in gold_by_id
+                and gold_by_id[c["id"]][0] in c["source"]["quote"]
+                and gold_by_id[c["id"]][1]==c["source"]["document_id"])
+            row["source_span_criterion_recall"]=source_span_matches/len(gold_by_id)
+            row["source_span_precision"]=source_span_matches/len(criteria)
+            row["addendum_supersession_correct"]=bool(criteria.get("T01A",{}).get("active")
+                and criteria.get("T01A",{}).get("supersedes")=="T01"
+                and not criteria.get("T01",{}).get("active",True))
+            if case.get("model_run",{}).get("runtime")=="ollama":
+                response=httpx.get(os.environ.get("TENDER_LOCAL_MODEL_URL","http://127.0.0.1:11434")+"/api/ps",
+                                   timeout=5,trust_env=False)
+                response.raise_for_status()
+                loaded=next((m for m in response.json().get("models",[]) if m.get("digest")==case["model_run"]["model_digest"]),{})
+                row["runtime_memory_observation"]={k:loaded.get(k) for k in ("size","size_vram","context_length")}
             # No automated deterministic mappings or fabricated real human review.
             service.approve_plan(case["id"],dict(reviewer="TEST SIMULATION",digest=case["plan"]["digest"],confirmed=True))
             case=await workflow.advance(case["id"])
@@ -55,4 +89,8 @@ async def main(repeats):
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--repeats",type=int,choices=range(1,6),default=1)
-    asyncio.run(main(parser.parse_args().repeats))
+    parser.add_argument("--model",default="qwen2.5-1.5b-instruct-q4_k_m.gguf")
+    parser.add_argument("--native-text",action="store_true")
+    parser.add_argument("--append",action="store_true",help="Append repeat measurements to the existing local result file")
+    arguments=parser.parse_args()
+    asyncio.run(main(arguments.repeats,arguments.model,arguments.native_text,arguments.append))

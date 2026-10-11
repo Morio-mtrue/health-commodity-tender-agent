@@ -110,6 +110,12 @@ class InputDocument(StrictModel):
     source_url: str | None = None
     supersedes_document: str | None = None
 
+    @model_validator(mode="after")
+    def document_role(self):
+        if self.kind != "bid" and self.bidder_id is not None:
+            raise ValueError("Tender and addendum documents cannot supply bidder evidence")
+        return self
+
 
 class CaseRequest(StrictModel):
     name: str = Field(min_length=1, max_length=150)

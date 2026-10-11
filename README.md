@@ -12,9 +12,9 @@ Prerequisites: [uv](https://docs.astral.sh/uv/getting-started/installation/) and
 
 Open **http://127.0.0.1:8000**. Choose **Load synthetic case**, compile the plan, inspect each citation, and enter your reviewer name to lock it. Then evaluate the bids, inspect the draft, and approve export. Approvals bind to the exact plan or draft digest.
 
-The command installs project-local dependencies and starts a loopback-only server. It does not install a model runtime or download weights. The structured synthetic fixture runs without a model; an open-model workflow is a separate required submission task.
+The command installs project-local dependencies and starts a loopback-only server. The structured synthetic fixture runs without a model.
 
-To include the portable CPU runtime and checksum-verified Qwen weights (about 1.12 GB), use `./scripts/start.ps1 -WithModel`. No system model installation is needed. Select `qwen2.5-1.5b-instruct-q4_k_m.gguf` in extraction settings. See [model setup](docs/MODEL_SETUP.md).
+On the tested Windows computer, run `./scripts/start.ps1 -WithOllama` to use the signed official Ollama runtime and checksum-verified Qwen weights (about 1.12 GB). Select `tender-qwen:1.5b-q4` in extraction settings. Setup verifies the publisher signature before installation and disables cloud features for the project server. The optional portable route `-WithModel` was blocked by this computer's Application Control policy. See [model setup](docs/MODEL_SETUP.md).
 
 ## Implemented
 
@@ -22,7 +22,7 @@ To include the portable CPU runtime and checksum-verified Qwen weights (about 1.
 - LangGraph with separate human plan and export interrupts.
 - Official Filesystem MCP `read_text_file`, restricted to the active case directory, with audit records.
 - SHA-256 inventory, native PDF/text extraction, table bounding boxes, and exact page citations.
-- Synthetic sourced criteria, addendum supersession, manual plan editing, versioned artifacts, and new locks after edits.
+- Synthetic sourced criteria, addendum supersession, check configuration forms, manual plan editing, versioned artifacts, and new locks after edits.
 - Evidence matrix, conservative abstention, Decimal arithmetic, pack normalization, tender-date expiry observations, and explicit FX rules.
 - Citation validation before accepting findings or drafting; submitted prices preserved.
 - Named local review gates, stale approval rejection, changed-source/draft detection, and prior run history.
@@ -31,7 +31,7 @@ To include the portable CPU runtime and checksum-verified Qwen weights (about 1.
 
 ## Verification
 
-The core suite passed **30 tests with one observed expected failure** through the one-command check. An actual MCP integration run invoked all four custom tools and the borrowed Filesystem server, produced **18 cited evidence cells and nine price rows**, and completed in **13.52 seconds**. Automated approvals are explicitly labelled **TEST SIMULATION**; they are not a committee approval or an open-model demonstration. See [EVALS.md](EVALS.md).
+The final one-command check passed **40 tests with one observed expected failure** in 50.48 seconds. An actual structured-fixture MCP integration run invoked all four custom tools and borrowed Filesystem, produced **18 cited cells and nine price rows**, and completed in **13.52 seconds**. Five document-scoped Qwen workflows completed in **100.78–193.20 seconds**, each finding all seven gold source spans with correct addendum precedence. Their manual criteria produced 18 unresolved cells and no automatic price checks. Automated approvals are labelled **TEST SIMULATION**; actual human review remains required. See [EVALS.md](EVALS.md).
 
 ```powershell
 ./scripts/start.ps1 -CheckOnly
@@ -46,7 +46,7 @@ Selected reference: [KEMSA/OIT05/2024-2026](https://kemsa.go.ke/tender/view/kems
 
 The included tender, addendum, registrations, and bids are original synthetic fixtures, not transcriptions of the public reference. Their products are not asserted to be its actual schedule.
 
-Local Ollama and portable llama.cpp adapters record the model/runtime identity, prompt version, and usage. They validate sourced manual criteria. The portable runtime was blocked by Windows Application Control before inference; a standard Ollama installation is being prepared. No successful open-model run or bake-off has completed. See [model setup](docs/MODEL_SETUP.md).
+Local Ollama and portable llama.cpp adapters record model/runtime identity, prompt/schema hashes, per-document usage, and immutable raw proposals. They validate sourced manual criteria. Original documents cannot claim supersession; an addendum quotation must explicitly name the criterion it replaces. Signed Ollama 0.40.3 successfully serves the pinned Qwen GGUF on CPU. A stronger-model bake-off remains outstanding. See [model setup](docs/MODEL_SETUP.md).
 
 ## Current limitations
 
@@ -68,4 +68,4 @@ Original code is MIT licensed. External documents, models, packages, and registe
 
 The user explicitly waived build-start confirmation and authorized implementation. Organizer timing has not been certified.
 
-Still required: retrieve/reconcile the public tender and every addendum; select actual schedule lines; practitioner review; local open-model workflow and five-run variation measurement; clean-machine setup check; public repository; and an unedited public video under three minutes. See [inputs](docs/INPUTS.md).
+Still required: retrieve/reconcile the public tender and every addendum; select actual schedule lines; practitioner review and actual human approvals; a stronger-model comparison; clean-machine setup check; and an unedited public video under three minutes. Five-run measurements are tracked in EVALS.md. The public repository is created and published. See [inputs](docs/INPUTS.md), the [review checklist](docs/REVIEW_CHECKLIST.md), and the [submission draft](docs/SUBMISSION.md).

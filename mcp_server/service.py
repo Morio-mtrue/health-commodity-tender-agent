@@ -8,6 +8,7 @@ import html
 import io
 import json
 import platform
+import re
 import time
 import uuid
 import zipfile
@@ -83,6 +84,11 @@ class ProcurementService:
                 raise ValueError("A bid cannot introduce evaluation criteria")
             if criterion.wording != criterion.source.quote:
                 raise ValueError("Criterion wording must equal its exact source quotation")
+            if criterion.supersedes:
+                replacement = re.search(r"(?:replac(?:e|es|ed|ing)|supersed(?:e|es|ed|ing))\s+(?:criterion\s+)?"
+                                        + re.escape(criterion.supersedes) + r"\b", criterion.wording, re.IGNORECASE)
+                if document["kind"] != "addendum" or not replacement:
+                    raise ValueError("Supersession requires an addendum quotation explicitly replacing the named criterion")
             if criterion.method in {"minimum", "exact"} and (not criterion.expected or criterion.expected not in criterion.wording):
                 raise ValueError("Deterministic expected value must occur in the published wording")
             if criterion.method == "arithmetic":
@@ -96,7 +102,10 @@ class ProcurementService:
                     if not all(str(value) in criterion.wording for value in [currency, fx.get("rate"), fx.get("date"), fx.get("source")]):
                         raise ValueError("Currency conversion metadata must be sourced in the published rule")
         ids = {c.id for c in plan.criteria}
+        superseded_ids = {c.supersedes for c in plan.criteria if c.supersedes}
         for c in plan.criteria:
+            if not c.active and c.id not in superseded_ids:
+                raise ValueError("Inactive criterion requires a sourced supersession link")
             if c.supersedes and (c.supersedes not in ids or c.supersedes == c.id):
                 raise ValueError("Invalid superseded criterion")
             if c.active and c.supersedes and next(x for x in plan.criteria if x.id==c.supersedes).active:
@@ -149,11 +158,24 @@ class ProcurementService:
         criteria, warnings, metadata = [], list(case["warnings"]), {}
         if model:
             proposed, metadata = compile_with_model(case["documents"], model)
+            proposal_path = f"model-proposals/proposal_{uuid.uuid4().hex[:12]}.json"
+            self.store.write(case_id, proposal_path, {"proposal":proposed,"metadata":metadata})
+            metadata = {**metadata,"raw_proposal_path":proposal_path,
+                        "raw_proposal_sha256":file_hash(self.store.case_path(case_id,proposal_path))}
+            self.store.event("local_model.proposal",case_id,{"model":model},metadata,"SUCCESS")
+            source_hashes = {d["id"]:d["sha256"] for d in case["documents"] if d["kind"] != "bid"}
             for item in proposed.get("criteria", []):
                 # The model proposes sourced text only. Deterministic methods require human editing.
+                item = dict(item)
+                source = dict(item["source"])
+                if source["document_id"] not in source_hashes:
+                    raise ValueError("Model citation must reference a registered tender or addendum")
+                source["sha256"] = source_hashes[source["document_id"]]
+                item.update(source=source,wording=source["quote"])
                 item.update(method="manual", field="", expected="", weight=None)
                 criteria.append(Criterion.model_validate(item))
             warnings += proposed.get("warnings", [])
+            warnings.append("Human review required: confirm completeness, addendum precedence, mandatory status, and deterministic mappings.")
             mode = f"local_model:{model}"
         else:
             mode = "structured_synthetic_fixture"
@@ -226,7 +248,7 @@ class ProcurementService:
         self._validate_plan(plan, case)
         findings, prices, bidders = [], [], sorted({d["bidder_id"] for d in case["documents"] if d["kind"]=="bid"})
         for bidder in bidders:
-            docs = [d for d in case["documents"] if d["bidder_id"] == bidder]
+            docs = [d for d in case["documents"] if d["kind"] == "bid" and d["bidder_id"] == bidder]
             for c in plan.criteria:
                 if not c.active:
                     continue
@@ -284,8 +306,8 @@ class ProcurementService:
     @staticmethod
     def runtime_versions():
         return {"python": platform.python_version(), **{p: version(p) for p in ("mcp","langgraph","pydantic","pdfplumber","pypdf","fastapi")},
-                "tool_version": "0.1.0", "prompt_version": "criteria-v1",
-                "prompt_sha256": file_hash("prompts/criteria-v1.txt"),
+                "tool_version": "0.1.0", "prompt_version": "criteria-v4",
+                "prompt_sha256": file_hash("prompts/criteria-v4.txt"),
                 "dependency_locks": {name:file_hash(name) for name in ("uv.lock","package-lock.json")}}
 
     @audited
@@ -343,6 +365,12 @@ class ProcurementService:
             archive.writestr("file-manifest.json", canonical(draft))
             archive.writestr("approvals.json", canonical(case["approvals"]))
             archive.writestr("tool-log.json", canonical(self.store.events(case_id)))
+            model_run = case.get("model_run") or {}
+            if model_run.get("raw_proposal_path"):
+                proposal_file = self.store.case_path(case_id,model_run["raw_proposal_path"])
+                if file_hash(proposal_file) != model_run["raw_proposal_sha256"]:
+                    raise ValueError("Raw model proposal changed after extraction")
+                archive.write(proposal_file,"model-proposal.json")
             # Include exact originals for offline citation inspection, all case-local and user supplied.
             for d in case["documents"]:
                 archive.write(self.store.case_path(case_id, d["path"]), f"sources/{d['id']}-{d['name']}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 import json
 import os
 import shutil
@@ -23,7 +24,8 @@ async def invoke(parameters, tool, arguments):
     async with stdio_client(parameters) as (reader, writer):
         async with ClientSession(reader, writer) as session:
             await session.initialize()
-            result = await session.call_tool(tool, arguments)
+            timeout = 660 if tool == "compile_evaluation_plan" and arguments.get("model") else 180
+            result = await session.call_tool(tool, arguments, read_timeout_seconds=timedelta(seconds=timeout))
             if result.isError:
                 raise ValueError("; ".join(c.text for c in result.content if hasattr(c, "text")))
             if result.structuredContent is not None:
@@ -35,7 +37,8 @@ async def procurement(store, tool, arguments):
     parameters = StdioServerParameters(command=sys.executable, args=["-m", "mcp_server.server"],
         cwd=str(Path.cwd()), env={**os.environ, "TENDER_CASE_ROOT": str(store.root)})
     try:
-        return await asyncio.wait_for(invoke(parameters, tool, arguments), timeout=180)
+        timeout = 660 if tool == "compile_evaluation_plan" and arguments.get("model") else 180
+        return await asyncio.wait_for(invoke(parameters, tool, arguments), timeout=timeout)
     except Exception as error:
         detail=error_detail(error)
         store.event("mcp_transport:"+tool, arguments.get("case_id"), arguments, {"error": detail}, "ERROR")

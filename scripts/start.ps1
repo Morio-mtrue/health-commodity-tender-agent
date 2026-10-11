@@ -1,5 +1,6 @@
-param([switch]$CheckOnly, [switch]$WithModel)
+param([switch]$CheckOnly, [switch]$WithModel, [switch]$WithOllama)
 $ErrorActionPreference = 'Stop'
+if ($WithModel -and $WithOllama) { throw 'Choose either -WithModel or -WithOllama.' }
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { throw 'Install uv from https://docs.astral.sh/uv/getting-started/installation/ and rerun this command.' }
@@ -14,7 +15,11 @@ if ($CheckOnly) {
     & '.\.venv\Scripts\python.exe' -m pytest -q
     exit $LASTEXITCODE
 }
-Write-Output 'Open http://127.0.0.1:8000 in your browser. Press Ctrl+C to stop.'
+if ($WithOllama) {
+    & (Join-Path $PSScriptRoot 'install_ollama.ps1')
+    $env:TENDER_LOCAL_MODEL_BACKEND = 'ollama'
+    $env:TENDER_LOCAL_MODEL_URL = 'http://127.0.0.1:11435'
+}
 if ($WithModel) {
     & '.\.venv\Scripts\python.exe' -m scripts.setup_cpu_model
     if ($LASTEXITCODE -ne 0) { throw 'Local model setup failed.' }
@@ -32,6 +37,7 @@ if ($WithModel) {
     Write-Output 'Local CPU model started on port 8081. Select qwen2.5-1.5b-instruct-q4_k_m.gguf in the workbench.'
 }
 try {
+    Write-Output 'Starting workbench at http://127.0.0.1:8000. Press Ctrl+C to stop.'
     & '.\.venv\Scripts\python.exe' -m uvicorn app.server:app --host 127.0.0.1 --port 8000
 } finally {
     if ($modelProcess -and -not $modelProcess.HasExited) { Stop-Process -Id $modelProcess.Id }

@@ -33,7 +33,7 @@ def create_app(root=None):
     @app.middleware("http")
     async def headers(request, call_next):
         response = await call_next(request)
-        response.headers.update({"X-Content-Type-Options":"nosniff", "Referrer-Policy":"no-referrer"})
+        response.headers.update({"X-Content-Type-Options":"nosniff", "Referrer-Policy":"no-referrer", "Cache-Control":"no-store"})
         if "Content-Security-Policy" not in response.headers:
             response.headers["Content-Security-Policy"]="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'"
         return response

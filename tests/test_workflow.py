@@ -69,6 +69,50 @@ def test_addendum_supersedes_original(service):
     assert finding["citations"][0]["document_id"]=="doc_002"
 
 
+def test_unsourced_supersession_cannot_hide_original_criteria(service):
+    case,plan=prepare(service,lock=False)
+    edited=deepcopy(plan["criteria"])
+    edited[3]["supersedes"]="P01"
+    edited[0]["active"]=False
+    with pytest.raises(ValueError,match="Supersession requires"):
+        service.revise_plan(case["id"],edited)
+    current=service.store.get(case["id"])["plan"]
+    assert next(c for c in current["criteria"] if c["id"]=="P01")["active"]
+
+
+def test_inactive_flag_cannot_hide_unsuperseded_requirement(service):
+    case,plan=prepare(service,lock=False)
+    edited=deepcopy(plan["criteria"])
+    edited[0]["active"]=False
+    with pytest.raises(ValueError,match="Inactive criterion"):
+        service.revise_plan(case["id"],edited)
+    assert service.store.get(case["id"])["plan"]["criteria"][0]["active"]
+
+
+@pytest.mark.parametrize("invented", [False, True])
+def test_model_quote_bound_to_registered_source(service,monkeypatch,invented):
+    case=service.register_case(request())
+    quote="An invented evaluation requirement." if invented else "A valid manufacturing certificate must be submitted."
+    # A paraphrased display field cannot replace published wording. The document hash
+    # comes from the trusted manifest, and the quote still has to occur on that page.
+    proposal={"criteria":[{"id":"M01","stage":"preliminary","mandatory":True,
+        "required_evidence":"Manufacturing certificate","wording":"A paraphrase",
+        "source":{"document_id":"doc_001","page":1,"quote":quote}}]}
+    monkeypatch.setattr("mcp_server.service.compile_with_model",lambda *_:(proposal,{"prompt_version":"test"}))
+    if invented:
+        with pytest.raises(ValueError,match="quote|Quote|quotation"):
+            service.compile_evaluation_plan(case["id"],model="test")
+        assert not service.store.get(case["id"]).get("plan")
+    else:
+        plan=service.compile_evaluation_plan(case["id"],model="test")
+        assert plan["criteria"][0]["wording"]==quote
+        assert plan["criteria"][0]["source"]["sha256"]==case["documents"][0]["sha256"]
+        assert not plan["locked"]
+        raw_path=service.store.get(case["id"])["model_run"]["raw_proposal_path"]
+        raw=json.loads(service.store.case_path(case["id"],raw_path).read_text())
+        assert raw["proposal"]==proposal
+
+
 def test_missing_mandatory_evidence_is_cited(service):
     case,plan=prepare(service)
     run=service.evaluate_bid_pack(case["id"],plan["id"])
@@ -151,6 +195,13 @@ def test_five_deterministic_repeats_agree(service):
 def test_unsourced_finding_rejected():
     with pytest.raises(ValidationError):
         Finding(id="bad",bidder_id="BID_A",category="technical",status="UNSUPPORTED",claim="Adverse claim",citations=[])
+
+
+def test_tender_cannot_masquerade_as_bid_evidence(service):
+    payload=request()
+    payload["documents"][0]["bidder_id"]="BID_A"
+    with pytest.raises(ValidationError,match="cannot supply bidder evidence"):
+        service.register_case(payload)
 
 
 def test_bad_citation_and_bid_introduced_rule_rejected(service):
