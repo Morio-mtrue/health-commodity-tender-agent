@@ -36,7 +36,7 @@ class ModelProposal(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-def extract_documents(client,url,backend,model,documents,prompt,schema):
+def extract_documents(client,url,backend,model,documents,prompt,schema,feedback=""):
     proposed={"criteria":[],"warnings":[]}
     requests=[]
     deadline=time.monotonic()+600
@@ -52,6 +52,10 @@ def extract_documents(client,url,backend,model,documents,prompt,schema):
         if document["kind"]=="tender":
             scoped["$defs"]["ModelCriterion"]["properties"]["supersedes"]={"type":"null"}
         system_prompt=prompt+"\nOutput JSON schema:\n"+json.dumps(scoped)
+        if feedback:
+            # Validator output from our own code, never document text, so it is safe to show the model.
+            system_prompt+=("\nA previous proposal was rejected by the validator: "+feedback+
+                "\nCorrect that problem. Copy quotations character for character from the page text.")
         messages=[{"role":"system","content":system_prompt},{"role":"user","content":json.dumps(pages)}]
         remaining=deadline-time.monotonic()
         if remaining<=0:
@@ -87,7 +91,7 @@ def extract_documents(client,url,backend,model,documents,prompt,schema):
         "eval_count":sum(r.get("eval_count") or 0 for r in requests)}
 
 
-def compile_with_model(documents, model):
+def compile_with_model(documents, model, feedback=""):
     if model.lower().endswith((":cloud", "-cloud")):
         raise ValueError("Cloud models are not allowed in the local workbench")
     backend = os.getenv("TENDER_LOCAL_MODEL_BACKEND", "llamacpp" if model.endswith(".gguf") else "ollama")
@@ -119,8 +123,8 @@ def compile_with_model(documents, model):
                           for item in served.json().get("data", [])]
             if model not in identities:
                 raise ValueError("Local server is serving a different model than the pinned manifest")
-            output,measurements=extract_documents(client,url,backend,model,documents,prompt,schema)
-            return output, {**manifest,**measurements,"prompt_version":"criteria-v4","prompt_sha256":prompt_digest,
+            output,measurements=extract_documents(client,url,backend,model,documents,prompt,schema,feedback)
+            return output, {**manifest,**measurements,"prompt_version":"criteria-v4","prompt_sha256":prompt_digest,"correction_feedback":feedback or None,
                             "output_schema_sha256":schema_digest}
         runtime = client.get(url + "/api/version")
         runtime.raise_for_status()
@@ -136,8 +140,8 @@ def compile_with_model(documents, model):
         details=info.json()
         if details.get("remote_host") or details.get("remote_model") or details.get("details",{}).get("format") != "gguf":
             raise ValueError("Selected Ollama model must have verified local GGUF metadata")
-        output,measurements=extract_documents(client,url,backend,model,documents,prompt,schema)
+        output,measurements=extract_documents(client,url,backend,model,documents,prompt,schema,feedback)
         return output, {**measurements,"runtime": "ollama", "runtime_version": runtime.json().get("version"),
                         "model": model, "model_digest": selected.get("digest"), "model_details": info.json().get("details"),
-                        "prompt_version": "criteria-v4", "prompt_sha256":prompt_digest,
+                        "prompt_version": "criteria-v4", "prompt_sha256":prompt_digest, "correction_feedback":feedback or None,
                         "output_schema_sha256":schema_digest}

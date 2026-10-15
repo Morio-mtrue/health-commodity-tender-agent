@@ -78,6 +78,10 @@ async def main(repeats,model,native_text=False,append=False):
                                  for status in {f["status"] for f in case["evaluation"]["findings"]}})
         except Exception as error:
             row.update(status="FAILED",error=str(error),error_type=type(error).__name__)
+        recovery=[e["status"] for e in store.events(row["case_id"]) if e["tool"]=="agent.recovery"]
+        row.update(compile_recovery_events=recovery,compile_attempts=1+recovery.count("RETRY"),
+                   case_state=store.get(row["case_id"])["state"],
+                   award_history=(store.get(row["case_id"]).get("award_history") or {}).get("result",{}).get("status"))
         row["duration_seconds"]=round(time.monotonic()-tick,2)
         row["audit_integrity"]=store.verify_audit()
         row["hosted_api_cost"]=0

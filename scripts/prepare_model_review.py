@@ -11,7 +11,7 @@ from scripts.model_eval import native_tender_payload
 
 async def main(model):
     store=Store("outputs")
-    payload=native_tender_payload("Codex setup")
+    payload=native_tender_payload("Demo operator")
     payload["name"]="Open-weights · synthetic review"
     case=await procurement(store,"register_case",{"request":payload})
     case=await Workflow(store).advance(case["id"],model=model)

@@ -67,7 +67,7 @@ async def borrowed_manifest_read(store, case_id):
                     raise ValueError("Borrowed manifest content mismatch")
                 output = {"status": "SUCCESS", "manifest": json.loads(contents)}
         store.event("filesystem.read_text_file", case_id, args, output, "SUCCESS", call_id=call_id, started_at=started)
-        return {"status": "SUCCESS", "tool": "filesystem.read_text_file"}
+        return {"status": "SUCCESS", "tool": "filesystem.read_text_file", "manifest": output["manifest"]}
     except Exception as error:
         output = {"status": "UNRESOLVED", "reason": str(error)}
         store.event("filesystem.read_text_file", case_id, args, output, "ERROR", call_id=call_id, started_at=started)

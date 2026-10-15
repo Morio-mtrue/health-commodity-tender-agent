@@ -37,5 +37,8 @@ def request(operator="Demo operator"):
     ]:
         docs.append({"name":name,"kind":kind,"bidder_id":bidder,"synthetic":True,
                      "content_base64":base64.b64encode(json.dumps(payload,indent=2).encode()).decode()})
+    # The public reference is linked for award-history context only. Its archive page says 12 November 2024;
+    # the agent compares that declared date with the published OCDS tenderPeriod.endDate.
     return {"name":"Oral formulations · synthetic review", "operator":operator,"closed_on":"2024-11-12",
-            "closure_source":"Original synthetic demonstration; not an official KEMSA tender", "documents":docs}
+            "closure_source":"KEMSA archive page for reference KEMSA/OIT05/2024-2026; bids and criteria are synthetic",
+            "reference_ocid":"ocds-5whusi-KEMSA/OIT05/2024-2026", "documents":docs}
