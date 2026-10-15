@@ -1,4 +1,4 @@
-param([switch]$CheckOnly, [switch]$WithModel, [switch]$WithOllama)
+param([switch]$CheckOnly, [switch]$WithModel, [switch]$WithOllama, [switch]$NoPublicData)
 $ErrorActionPreference = 'Stop'
 if ($WithModel -and $WithOllama) { throw 'Choose either -WithModel or -WithOllama.' }
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -14,6 +14,11 @@ if (-not (Test-Path -LiteralPath 'node_modules\@modelcontextprotocol\server-file
 if ($CheckOnly) {
     & '.\.venv\Scripts\python.exe' -m pytest -q
     exit $LASTEXITCODE
+}
+if (-not $NoPublicData -and -not (Test-Path -LiteralPath 'local_data\ocds\kenya-ppra.sqlite')) {
+    # About 16 MB of public Kenya OCDS award data; failure is not fatal.
+    & '.\.venv\Scripts\python.exe' -m scripts.fetch_ocds
+    if ($LASTEXITCODE -ne 0) { Write-Output 'Public award data could not be downloaded; award history will show SOURCE_UNAVAILABLE.' }
 }
 if ($WithOllama) {
     & (Join-Path $PSScriptRoot 'install_ollama.ps1')
