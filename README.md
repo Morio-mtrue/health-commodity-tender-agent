@@ -98,12 +98,14 @@ See [EVALS.md](EVALS.md). Summary as of 15 October 2026:
 - Full agent run over real MCP transport with real OCDS data, four repeats: 5 custom tools plus the borrowed server, 18 cited evidence cells, 9 price rows, 1 closing-date discrepancy cited to the OCDS record, audit chain valid, 29.89 to 56.27 seconds, identical results.
 - Three Qwen workflows through this graph: all exported, 7/7 gold source spans, correct addendum precedence, first-attempt success, 193.06 to 225.00 seconds (119.5 to 156.0 s of model inference, 898 identical output tokens each). Five earlier runs on 11 October: 100.78 to 193.20 seconds.
 - The retry loop is covered by tests with a deliberately wrong simulated model; Qwen has not yet failed validation in a real run, so the loop has not been observed live.
+- Speed against the challenge's 20-minute target: about 30 seconds without a model and 193 to 225 seconds with Qwen on CPU for the synthetic case.
+- Real data: `search_award_history` ran over all 296 real KEMSA contracting processes with no errors and every award cited; it flagged 109 inverted tender periods.
 - Cost per run: no hosted API. CPU time on a 16 GB laptop; electricity not measured.
 
 ## Not finished
 
 - **No OCR.** Image-only pages become `OCR_FAILED` and stay unresolved (a strict expected-failure test).
-- **Real tender PDFs not used.** The KEMSA portal timed out for the original and both addenda. The closing date is now cross-checked against OCDS (archive page 12 November 2024, OCDS 13 November 2024) and left for a human to resolve.
+- **Real tender criteria not extracted yet.** On the real tender's six criteria pages (from the PPIP mirror; the KEMSA site timed out), Qwen on CPU timed out after 600 s. A timeout is also retried like a validation error, which wastes time. The closing date is cross-checked against OCDS (archive page 12 November 2024, OCDS 13 November 2024) and left for a human to resolve.
 - **No unit-price benchmark.** The public data has no item lines.
 - **Registry checks are stubs.** Pharmacy and Poisons Board and debarment lookups stay `UNRESOLVED`; no verified records are parsed.
 - **Practitioner review pending.** The workflow has not yet been reviewed by a working procurement officer.

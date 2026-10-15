@@ -106,6 +106,37 @@ Same model, prompt and inputs; 100.78 s to 193.20 s, mean 141.58 s, sample stand
 - v3: invented supersession links; this exposed a missing semantic check, now a regression test (row 3).
 - v4: one document per request, supersession allowed only when an addendum quote names the criterion. Current.
 
+## Real-data runs (15 October 2026, 23:00 EAT)
+
+### Award history over every real KEMSA record
+
+`uv run python -m scripts.ocds_sweep` runs `search_award_history` on all 296 contracting processes whose buyer is the Kenya Medical Supplies Authority in the 2024 and 2025 Kenya PPRA OCDS files.
+
+| Measure | Result |
+| --- | --- |
+| Processes searched | 296, no errors, 0.11 s |
+| Processes with awards | 126 |
+| Awards returned | 202, every one with file hash, line and JSON pointer |
+| `TENDER_PERIOD_INVERTED` | 109 of 296 processes (start date after end date in the published data) |
+| `AWARD_VALUE_ABOVE_DATASET_P99` | 25 awards |
+| `SUPPLIER_NAME_HAS_LIST_NUMBER` | 7 awards |
+| Contact details in the index | None |
+
+Weakness found: the outlier cutoff is the 99th percentile across all Kenyan buyers (KES 78.0 million). A national medicines buyer awards many genuinely large contracts, so 25 of KEMSA's 202 awards drop out of its statistics. They stay visible and flagged, but a per-buyer or per-category threshold would be fairer. Not fixed tonight.
+
+### Qwen on the real tender's criteria pages
+
+`scripts/real_tender_run.py` registers pages 39 to 44 (the published evaluation criteria) of the closed KEMSA/OIT05/2024-2026 tender, taken from the PPIP mirror because the KEMSA site timed out (original PDF: 187 pages, 5,083,464 bytes, SHA-256 `7cdece67...7dec83`). Bids stay synthetic. Addenda were not retrievable.
+
+| Step | Result |
+| --- | --- |
+| Register, borrowed manifest read, work plan | SUCCESS in about 4 s |
+| Compile attempt 1 (Qwen2.5-1.5B, CPU) | **FAILED: ReadTimeout after 600.3 s**, no proposal |
+| Agent response | Logged `agent.recovery` RETRY and started attempt 2 |
+| Attempt 2 | Stopped by hand at 23:19 EAT to free the CPU; not measured |
+
+This is a real failure, not fixed: six dense real pages exceed what a 1.5B model can generate on this CPU inside the 600 s budget, while the short synthetic tender takes 120 to 156 s. It also exposes a design flaw: a timeout is retried like a validation error, which spends another 600 s for the same outcome. Next: retry only validation errors, split long documents by page, raise the budget for real tenders, or use a stronger model or a GPU.
+
 ## Unfixed failure: scanned pages
 
 `test_scanned_page_ocr_known_failure` builds an image-only certificate page and expects its text. Extraction returns empty text and `OCR_FAILED`. The test is a strict XFAIL, so an accidental pass would fail the suite. Next: sandboxed PDF sanitization, selective OCR (Tesseract) on pages with no native text, rotation handling, and page-level provenance for OCR text, validated on merged tables before claiming support.
