@@ -1,6 +1,6 @@
 # MCP tool contracts
 
-All four tools are implemented in mcp_server/server.py and exercised through actual stdio transport. This document describes the intended contract; README.md records current limitations. Human approvals are local UI attestations and are deliberately absent from the MCP tool surface.
+All five tools are implemented in mcp_server/server.py and exercised through actual stdio transport. This document describes the intended contract; README.md records current limitations. Human approvals are local UI attestations and are deliberately absent from the MCP tool surface.
 
 ## Shared rules
 
@@ -20,11 +20,19 @@ Only human UI approval operations can lock criteria and approve export. A tool a
 
 ## compile_evaluation_plan
 
-**Inputs:** case ID, current manifest ID, bounded extraction settings.
+**Inputs:** case ID, optional local model tag, optional validator feedback from a rejected attempt.
 
 **Outputs:** draft plan ID/hash/revision, ordered stage criteria, exact source wording, published mandatory/weighted rules, expected evidence, extraction uncertainty, and unresolved requirements.
 
 **Effects:** saves a versioned draft. Each active criterion must cite an applicable tender/addendum passage. Unsupported proposed rules remain unresolved rather than active criteria. A named human review and lock are required before evaluation.
+
+## search_award_history
+
+**Inputs:** OCID or title keywords, optional buyer filter and limit, optional case ID.
+
+**Outputs:** matching OCDS releases with tender title, buyer, published closing date, procurement method, and contract-level awards. Each award carries normalized and published supplier names, data-quality flags (`SUPPLIER_NAME_HAS_LIST_NUMBER`, `AWARD_VALUE_ZERO`, `AWARD_VALUE_MISSING`, `AWARD_VALUE_ABOVE_DATASET_P99`, `TENDER_PERIOD_INVERTED`) and a citation (file SHA-256, line, OCID, release ID, JSON pointer). Summary statistics use only awards without value flags. A missing index returns `SOURCE_UNAVAILABLE`.
+
+**Effects:** without a case, read-only. With a case, writes a versioned `references/` annex and records a `CLOSING_DATE_DISCREPANCY` observation when the declared and published closing dates differ. It never produces a unit-price benchmark (the publication has no item lines), never matches supplier identities, and never stores party contact details.
 
 ## evaluate_bid_pack
 
@@ -44,6 +52,6 @@ Only human UI approval operations can lock criteria and approve export. A tool a
 
 ## Workflow states
 
-`CASE_CREATED` → `FILES_VALIDATED` → `PLAN_DRAFTED` → `WAITING_FOR_PLAN_APPROVAL` → `PLAN_LOCKED` → `BIDS_EXTRACTED` → `CHECKS_COMPLETED` → `FINDINGS_VERIFIED` → `DRAFT_READY` → `WAITING_FOR_EXPORT_APPROVAL` → `EXPORTED`.
+States, in order: `CASE_CREATED`, `FILES_VALIDATED`, `PLAN_DRAFTED`, `WAITING_FOR_PLAN_APPROVAL`, `PLAN_LOCKED`, `BIDS_EXTRACTED`, `CHECKS_COMPLETED`, `FINDINGS_VERIFIED`, `DRAFT_READY`, `WAITING_FOR_EXPORT_APPROVAL`, `EXPORTED`. The agent can also stop in `HUMAN_RECOVERY_REQUIRED` when plan compilation fails after its retry limit.
 
 Explicit failure/review reasons: `MISSING_DOCUMENT`, `OCR_FAILED`, `SOURCE_UNAVAILABLE`, `AMBIGUOUS_EVIDENCE`, `CALCULATION_CONFLICT`, and `HUMAN_REVIEW_REQUIRED`. An unavailable external source may allow drafting with a cited unresolved item; an unapproved plan blocks evaluation.

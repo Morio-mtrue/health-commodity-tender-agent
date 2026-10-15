@@ -1,30 +1,54 @@
 # Architecture
 
-**Implemented MVP:** a local evidence workbench for a public-sector committee reviewing a closed health commodity tender and synthetic bids. The award remains outside the application.
+A local agent that prepares a cited evaluation file for a health commodity tender committee and stops at two named-human gates. The award decision is outside the system.
 
 ```mermaid
 flowchart LR
-    UI[Loopback FastAPI and browser UI] --> G[Bounded LangGraph]
-    G --> C[Custom procurement MCP over stdio]
-    G --> F[Official Filesystem MCP over stdio]
-    C --> P[Native PDF / text / structured fixtures]
-    C --> R[Decimal rules and citation verification]
-    C --> M[Local Ollama or portable llama.cpp extraction]
-    C --> X[Allowlisted portal attempts]
-    C --> S[SQLite + case-local versioned artifacts]
-    F --> S
-    UI --> H[Named plan and export attestations]
+    UI[Loopback FastAPI UI] --> G[LangGraph agent]
+    G -- read_text_file --> F[Borrowed: official Filesystem MCP]
+    G -- 5 tools over stdio --> C[Built: procurement MCP server]
+    C --> D[PDF / text / JSON extraction, SHA-256, page citations]
+    C --> R[Decimal rules and citation validator]
+    C --> M[Local Qwen via Ollama, criteria proposals only]
+    C --> O[Kenya OCDS index: award history, quality flags]
+    C --> S[SQLite cases + hash-linked audit + versioned files]
+    UI --> H[Named plan lock and export approval]
     H --> S
 ```
 
-**Agent shape:** one graph compiles a plan, interrupts for named review, reads the case manifest through borrowed MCP, evaluates evidence, validates citations, drafts, and interrupts for export. Built tools: `register_case`, `compile_evaluation_plan`, `evaluate_bid_pack`, and `draft_evaluation_file`. The UI uses actual MCP transport. Approval methods are deliberately absent from the MCP server.
+## Agent shape
 
-**Borrowed:** official Filesystem MCP receives only the active case root. Existing path validation is preferable to duplicating a filesystem server. A 13.52-second integration test exercised `read_text_file` and all four custom tools with explicitly simulated test approvals.
+One LangGraph graph with a conditional route, a retry loop and two `interrupt` gates:
 
-**Evidence and rules:** original hashes are rechecked at tool boundaries. Criteria require exact cited wording; bids cannot introduce rules. Addenda deactivate superseded criteria. Deterministic expected values, currencies, and rounding must occur in the cited wording. Every finding requires validated citations. Decimal computations preserve submitted prices. Missing FX rules, malformed documents, ambiguous equivalents, and competing evidence abstain.
+| Node | Behaviour |
+| --- | --- |
+| inspect | Reads the case manifest through the borrowed Filesystem MCP. A rule-based planner picks steps (model or fixture extraction, award history if a reference OCID is linked, documents needing recovery) and logs each reason. Falls back to the local store if the borrowed server fails. |
+| compile | Calls `compile_evaluation_plan`. On a validation error, loops back with the error as feedback, up to 3 attempts with a model and 1 without. Then routes to `needs_human`. |
+| needs_human | Sets `HUMAN_RECOVERY_REQUIRED` with the reason. Nothing is invented. |
+| award_history | Calls `search_award_history`; a failure is logged and the run continues to the gate. |
+| plan_gate | Interrupts until a named person locks the exact plan digest. |
+| evaluate, draft | `evaluate_bid_pack`, then `draft_evaluation_file`. |
+| export_gate | Interrupts until a named person approves the exact draft digest. |
 
-**Storage and approval:** SQLite persists cases and append-only hash-linked audit events. Case-local versioned files retain originals, manifests, plans, evaluations, drafts, and approvals. A lock binds to a plan digest; export approval binds to the draft digest. Changed inputs/drafts block continuation. Approved ZIPs include an unsigned HTML report, matrix, evidence/price/exception files, original sources, and complete logs. Administrator tampering is outside the demo trust boundary.
+The planner is deterministic on purpose: a 1.5B CPU model is not trusted to choose tools, and a rule leaves an auditable reason. The model's only job is proposing quoted criteria, which code verifies.
 
-**Model and sources:** local Ollama and portable llama.cpp adapters extract one document per request and record model/runtime identity, prompt/schema hashes, usage, and immutable raw proposals. Original tender requests constrain supersedes to null. Named supersession requires an explicit addendum replacement quotation. Hashes come from the trusted manifest; quotations must match original pages. Criteria stay manual until human mappings; arithmetic/approval stay outside the model. Signed Ollama served the pinned Qwen GGUF through a complete 193.20-second simulated workflow. The portable runtime was blocked by Windows Application Control. Portal status cannot establish a registry match without verified records. Native extraction/table boxes work; OCR remains unconfigured. Weighted scoring is unsupported.
+## MCP servers: built and borrowed
 
-**Persistence and scope:** graph checkpoints are in memory; durable case state reconstructs gates after restart. Edits retain previous runs, require a new lock, and currently rerun the whole case. The loopback browser uses session-token/origin/host checks; reviewer names are local demo attestations, not enterprise authentication. No winner, award, signature, bidder communication, live procurement, or real unpublished bid is produced.
+**Built** (`mcp_server/server.py`, Python FastMCP, stdio): `register_case`, `compile_evaluation_plan`, `search_award_history`, `evaluate_bid_pack`, `draft_evaluation_file`. Each writes a versioned artifact; four of them write case files. `search_award_history` is reusable without a case: give it an OCID or keywords and it returns cited awards from any OCDS JSONL index built by `connectors/ocds.py`, so it should work for the other eight African publishers on the same schema (only Kenya tested). Approval is deliberately not an MCP tool.
+
+**Borrowed:** official `@modelcontextprotocol/server-filesystem` 1.0.0, given only the active case folder. Its path validation and symlink handling are maintained upstream; a home-made file server would be new attack surface.
+
+## Evidence rules
+
+- Every criterion must quote its source page exactly; bids cannot introduce criteria; an addendum may supersede a criterion only if its quotation names it.
+- Every finding needs at least one validated citation (schema-enforced). Missing, corrupt, ambiguous or competing evidence becomes `UNRESOLVED`, never an adverse flag.
+- Submitted prices are preserved; Decimal arithmetic records discrepancies; currency conversion needs a published rule.
+- Public award data is context: it adds no criteria and no supplier findings. Each value cites file hash, line, OCID, release and JSON pointer. Contact details are dropped at index time.
+
+## Storage, audit and approvals
+
+SQLite holds cases and an append-only, hash-chained audit log (database triggers block update and delete). Every tool call, retry, plan decision, borrowed read and approval is an event with inputs, outputs, timestamps and status. A plan lock binds the plan digest; export approval binds the draft digest; changed sources or drafts block continuation. The exported ZIP carries the unsigned report, matrix, evidence, award history annex, original sources and the complete log.
+
+## Known limits
+
+No OCR. Graph checkpoints are in memory (case state rebuilds gates after restart). Reviewer names are local attestations, not authentication. Registry lookups are unresolved stubs. See README "Not finished".

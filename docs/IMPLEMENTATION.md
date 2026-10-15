@@ -1,10 +1,9 @@
 # Implementation backlog
 
-**Current phase: synthetic MVP with passing core, real MCP, and local open-model checks.** The user waived the build-window prerequisite. The public MIT repository is created. This backlog preserves the intended sequence; README.md and EVALS.md distinguish observed behavior from unfinished scope. Public corpus retrieval, practitioner and human review, OCR, verified external records, a stronger-model comparison, and the public video remain outstanding.
+**Current phase (15 October 2026): synthetic bid evaluation plus real Kenya OCDS award history, an agent planner with bounded retry, real MCP transport, and measured local open-model runs.** This was the original build backlog; the public MIT repository is created. This backlog preserves the intended sequence; README.md and EVALS.md distinguish observed behavior from unfinished scope. Public corpus retrieval, practitioner and human review, OCR, verified external records, a stronger-model comparison, and the public video remain outstanding.
 
 ## 1. Corpus and environment
 
-- Preserve the original plan and the user's explicit build-window waiver; organizer eligibility remains unverified.
 - Select a demonstrably closed tender and addenda; record provenance and redistribution restrictions.
 - Freeze three to five product lines, synthetic bidder scenarios, and gold criteria.
 - Review the labels with a practitioner.
@@ -63,6 +62,6 @@ Exit: full reviewable package and a measured open-model run.
 - Record one actually observed unresolved failure.
 - Verify clean setup and under-20-minute runtime.
 - Update README/architecture/results to match observed behavior.
-- Prepare the public repository, 300-word description, and unedited under-three-minute demo for user review.
+- Prepare the public repository, 300-word description, and unedited under-three-minute demo.
 
 Exit: actual acceptance evidence and reviewable submission artifacts. Publication and submission status must remain explicit.

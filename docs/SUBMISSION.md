@@ -1,41 +1,48 @@
-# Submission draft and recording guide
+# Submission text and recording guide
 
-This is a reviewable draft. Repository publication is authorized and complete; no competition form, practitioner message, or video publication has been submitted.
+## Description (about 300 words)
 
-## Description (300 whitespace-delimited words)
+Health Commodity Tender Workbench prepares the evaluation file for a public tender evaluation committee buying medicines, the work a Kenya Medical Supplies Authority (KEMSA) ad hoc committee does in its preliminary, technical and financial evaluation. Theme: Health commodity tenders. It never selects a supplier, signs, or awards.
 
-Health Commodity Tender Evaluation Workbench helps a public sector committee review a closed health commodity tender using clearly labelled synthetic bids. It preserves original documents, hashes every source, extracts published requirements, and prepares an unsigned evaluation package for human review. It never selects a supplier, issues an award, changes submitted prices, or contacts bidders.
+A LangGraph agent reads the case manifest through the official Filesystem MCP server and writes a work plan with reasons. It then calls five tools on our own MCP server: register_case, compile_evaluation_plan, search_award_history, evaluate_bid_pack and draft_evaluation_file. If a local model's criteria proposal fails validation, for example a quotation that is not on the cited page, the agent retries with the validator's error and stops for a named human after three attempts. Two interrupts require a named person to lock the exact plan digest and to approve the exact draft. Every tool call, retry, decision and approval goes to a hash-chained audit log.
 
-A bounded LangGraph workflow invokes four custom MCP tools over actual stdio transport: register_case, compile_evaluation_plan, evaluate_bid_pack, and draft_evaluation_file. The official Filesystem MCP server reads the active case manifest inside a restricted case directory. Every tool call records inputs, outputs, timing, status, and errors in a hash linked audit trail.
+Bid documents are not public, so the bid half runs on an original synthetic tender, addendum and three synthetic bids. Every criterion quotes its source page; every finding cites a document hash and page; missing or ambiguous evidence stays unresolved; submitted prices are preserved while Decimal arithmetic exposes discrepancies.
 
-Local Qwen weights run through signed Ollama on the Windows demo computer. Schema constrained extraction proposes manual criteria with quotations. The application verifies each quotation against its original page and binds the source hash from the trusted manifest. A named reviewer checks completeness, addendum precedence, and deterministic mappings before locking the exact plan digest. A separate named approval binds export to the reviewed draft digest.
+The public half runs on real Kenya PPRA OCDS data for 2024 and 2025. For the reference tender KEMSA/OIT05/2024-2026 the agent retrieves eight awards worth KES 45.2 million and reports that the archive page (12 November 2024) and the OCDS record (13 November 2024) disagree on the closing date, citing file hash, line and JSON pointer. It flags numbered supplier names, zero and extreme values, and inverted tender periods, and drops personal contact details. The data has no item lines, so no unit-price benchmark is claimed.
 
-Deterministic code uses Decimal arithmetic for extended prices, pack normalization, rounding, and explicitly sourced currency conversion. It preserves submitted amounts and records discrepancies. Ambiguous equivalents, inaccessible portals, corrupt documents, and missing interpretation remain unresolved. Exports include the evidence matrix, original sources, price observations, review queue, approval records, raw model proposal, and complete tool logs; recommendation and signature fields stay blank.
+Criteria extraction runs on Qwen2.5-1.5B through Ollama on a CPU laptop. Unfinished: OCR, registry lookups, real tender PDFs, practitioner review, and a stronger-model comparison.
 
-Tests exercise addendum precedence, missing certificates, price discrepancies, expiry observations, prompt injection, changed sources, stale approvals, and path boundaries. A real scanned fixture exposes the current OCR limitation. The selected closed KEMSA reference still requires retrieval and closing date reconciliation. Public register parsing and a stronger model comparison remain unfinished. Automated TEST SIMULATION approvals measure engineering behavior; practitioner review and actual human approvals are required before the public demonstration and final submission.
+## Recording plan (under 3 minutes, unedited)
 
-## Before recording
+The model compile takes about 2 to 4 minutes on this laptop, longer than the whole video. So the live run uses the structured synthetic case, and the open-weights run is shown from its completed case and log. Say this on camera.
 
-- Obtain the selected public originals and all addenda, reconcile the closing date, and freeze actual schedule lines.
-- Have the arranged practitioner review completeness, terminology, deterministic mappings, and gold labels using REVIEW_CHECKLIST.md.
-- Perform the plan and export approvals yourself, under your own name.
-- Confirm the current model measurements in EVALS.md. Simulated test gates are not human committee approvals.
-- Use synthetic supplier names, registrations, certificates, and prices throughout. Keep real contact details out of the recording and public fixtures.
+Before recording:
 
-## Unedited recording sequence
+1. `./scripts/start.ps1` (or `start.sh`) running in a visible terminal.
+2. Run `uv run python -m scripts.prepare_failure_case` so the "expected stop" case exists.
+3. Have one completed Qwen case in the picker: with the project Ollama running (`./scripts/start.ps1 -WithOllama` starts it on port 11435), set `TENDER_LOCAL_MODEL_URL=http://127.0.0.1:11435` and run `uv run python -m scripts.prepare_model_review`. Then lock and export that case yourself under your own name.
+4. Browser at http://127.0.0.1:8000, zoom so tables are readable.
 
-1. Start the local workbench and model before recording. Display the closed-tender provenance and clearly labelled synthetic bid inventory.
-2. Compile the plan with the exact pinned local model tag. Keep recording during inference; explain the four MCP tools, borrowed server, source hashes, and review gates while the model runs.
-3. Open a quotation and its full source page. Show the addendum link and check completeness. Lock the reviewed plan with your own name and exact digest.
-4. Evaluate and show the cited matrix, preserved submitted price discrepancy, and unresolved reference checks.
-5. Open the unsigned draft. Show blank recommendation/signature/award fields. Approve export yourself and show the package and complete audit.
+Sequence (target times):
 
-The public video must be under three minutes and show an unedited run. Rehearse against actual measured latency; if model compilation and necessary review cannot fit, reduce the coherent tender excerpt or select a tested faster model. Do not cut out processing or human gates and describe the result as unedited. A video is not generated or uploaded by this project.
+| Time | Show | Say |
+| --- | --- | --- |
+| 0:00 | Landing page | Who it is for; it prepares the file and stops; it never awards. |
+| 0:15 | Load synthetic case, Case files | Every document hashed; bids are synthetic. |
+| 0:25 | Compile evaluation plan, then Case files: Agent work plan | Manifest read via the borrowed Filesystem MCP; steps chosen with reasons. |
+| 0:45 | Evaluation plan: closing-date warning, open one citation | Real OCDS record says 13 November, archive says 12; the agent flags it and does not choose. |
+| 1:05 | Review and lock plan, type your own name | Lock binds this exact digest. |
+| 1:15 | Evaluate, Compliance matrix, open BID_B P02 and the price row | Cited absence; 59,000 submitted, 60,000 calculated, submitted value preserved. |
+| 1:40 | Review queue: Public award history | Eight real awards, flags for numbered supplier names, file and line citations, no unit-price claim. |
+| 2:00 | Approve draft export with your name, then Audit trail | Every MCP call with inputs, outputs and timestamps; hash chain verified. |
+| 2:20 | Case picker: completed Qwen case, its audit trail | Open-weights run: model digest, timings, quotation checks. |
+| 2:35 | Case picker: expected-stop case | Where it fails: native tender, no model, agent stops for a human instead of inventing criteria. No OCR either. |
+| 2:50 | End | Repository link. |
 
-## Submission links to fill
+Do not cut processing time out and still call it unedited. If you overrun, drop the Qwen case segment and mention it in the description.
+
+## Links to fill
 
 - Code: https://github.com/Morio-mtrue/health-commodity-tender-agent
-- Public video: pending user recording and publication
-- Practitioner review: pending
-- Selected public corpus and complete source provenance: pending originals
-- Organizer eligibility/build window: user waived the local prerequisite; organizer certification remains unverified
+- Video: pending recording
+- Practitioner conversation: pending

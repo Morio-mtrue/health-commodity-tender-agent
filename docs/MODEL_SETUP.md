@@ -1,6 +1,6 @@
 # Local open-weights model setup
 
-The inspected demo computer has approximately 15.7 GiB RAM. Signed Ollama 0.40.3 is installed and serves the checksum-verified Qwen GGUF on CPU, with cloud disabled. Five corrected document-scoped workflows completed in 100.78–193.20 seconds with simulated approvals; measurements and limitations are recorded in EVALS.md.
+The inspected demo computer has approximately 15.7 GiB RAM. Signed Ollama 0.40.3 is installed and serves the checksum-verified Qwen GGUF on CPU, with cloud disabled. Eight document-scoped workflows (five on 11 October, three on 15 October 2026) completed in 100.78 to 225.00 seconds with simulated approvals; measurements and limitations are in EVALS.md.
 
 The adapters support local Ollama and portable llama.cpp HTTP endpoints. They record model/runtime identity, prompt version, and usage. Remote endpoints, credential URLs, oversized contexts, different served model identities, and truncated output are rejected.
 
@@ -10,7 +10,7 @@ The official [Qwen GGUF](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF)
 
 `./scripts/start.ps1 -WithModel` verifies those fixed files, starts a hidden CPU process, checks health, and runs the workbench. Interrupted downloads resume at a checked range and must pass the final checksum. However, this computer's Windows Application Control blocked the runtime DLL with WinError 4551. The first actual MCP model attempt failed after 12.88 seconds, before inference. This provides no model-quality or speed measurement. Security-policy changes are outside setup.
 
-The user authorized local runtime setup. The official Windows installer and installed executable both had valid Ollama Inc. Authenticode signatures. Installer provenance: 1,578,217,944 bytes, SHA-256 `ab81db6c6f4f65547242d1b2912e854da660ab3bc1dbd5ae3483831cf7668c80`. The recorded download SHA is provenance, not an independent publisher checksum; future installers still require valid publisher signatures. [Windows documentation](https://docs.ollama.com/windows).
+The official Windows installer and installed executable both had valid Ollama Inc. Authenticode signatures. Installer provenance: 1,578,217,944 bytes, SHA-256 `ab81db6c6f4f65547242d1b2912e854da660ab3bc1dbd5ae3483831cf7668c80`. The recorded download SHA is provenance, not an independent publisher checksum; future installers still require valid publisher signatures. [Windows documentation](https://docs.ollama.com/windows).
 
 The existing GGUF is imported as `tender-qwen:1.5b-q4`, manifest digest `2304751c9569070cb5bd3ef97e4f7dd5f769cee5ed635fbd6775ceb62de6b7e6`. Ollama reports parameter_size `1.8B`; this runtime metadata is retained separately from the publisher's Qwen2.5-1.5B model name. The project server uses port 11435, `.runtime/ollama-models`, `OLLAMA_NO_CLOUD=1`, and one inference slot. Other Ollama processes are not configured by the script. Initial Windows GPU discovery took about 96 seconds; readiness now permits 180 bounded attempts.
 

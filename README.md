@@ -1,71 +1,118 @@
-# Health Commodity Tender Evaluation Workbench
+# Health Commodity Tender Workbench
 
-A local evidence review workbench for a public-sector health commodity tender committee. It inventories a closed tender and synthetic bids, locks sourced criteria through human review, calculates price observations, and prepares an unsigned draft package. It never selects a winner or issues an award.
+An agent that prepares the evaluation file for a health commodity tender committee and then stops. It inventories the tender, addenda and bids, compiles the published criteria with exact citations, checks each bid against the criteria a named person has locked, checks price arithmetic, pulls the tender's real award history from Kenya's public OCDS data, and drafts an unsigned report. A named human approves the plan and the export. The agent never selects a winner, signs, or awards.
 
-## Run on Windows
+**Track:** Governance, The Bid Box Challenge. **Theme:** Health commodity tenders. **User:** an ad hoc tender evaluation committee at a buyer like KEMSA (Kenya Medical Supplies Authority) doing preliminary, technical and financial evaluation.
 
-Prerequisites: [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js LTS](https://nodejs.org/). Tested with Python 3.12.14. Dependencies are pinned in `uv.lock` and `package-lock.json`.
+## Which half this is built on
 
-```powershell
-./scripts/start.ps1
+Both, kept separate:
+
+| Half | Data | What it supports |
+| --- | --- | --- |
+| Bid evaluation | An original **synthetic** tender, addendum and three synthetic bids. Public portals publish no bid documents. | Criteria plan, evidence matrix, price arithmetic, draft file |
+| Public record | **Real** Kenya PPRA OCDS releases for 2024 and 2025 (92,229 contracting processes) from the [OCP Data Registry](https://data.open-contracting.org/en/publication/147) | Award history for the reference tender KEMSA/OIT05/2024-2026, comparable awards, closing-date cross-check |
+
+The public data has no item lines (zero tender or award items), so there is **no unit-price benchmark**. Award values are whole-contract amounts and are shown as context, never as a finding against a supplier.
+
+## Run it
+
+Prerequisites: [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js LTS](https://nodejs.org/). Python 3.12 and all packages are pinned (`uv.lock`, `package-lock.json`).
+
+```bash
+./scripts/start.sh          # macOS, Linux, Git Bash
 ```
 
-Open **http://127.0.0.1:8000**. Choose **Load synthetic case**, compile the plan, inspect each citation, and enter your reviewer name to lock it. Then evaluate the bids, inspect the draft, and approve export. Approvals bind to the exact plan or draft digest.
-
-The command installs project-local dependencies and starts a loopback-only server. The structured synthetic fixture runs without a model.
-
-On the tested Windows computer, run `./scripts/start.ps1 -WithOllama` to use the signed official Ollama runtime and checksum-verified Qwen weights (about 1.12 GB). Select `tender-qwen:1.5b-q4` in extraction settings. Setup verifies the publisher signature before installation and disables cloud features for the project server. The optional portable route `-WithModel` was blocked by this computer's Application Control policy. See [model setup](docs/MODEL_SETUP.md).
-
-## Implemented
-
-- Four real custom stdio MCP tools: `register_case`, `compile_evaluation_plan`, `evaluate_bid_pack`, and `draft_evaluation_file`.
-- LangGraph with separate human plan and export interrupts.
-- Official Filesystem MCP `read_text_file`, restricted to the active case directory, with audit records.
-- SHA-256 inventory, native PDF/text extraction, table bounding boxes, and exact page citations.
-- Synthetic sourced criteria, addendum supersession, check configuration forms, manual plan editing, versioned artifacts, and new locks after edits.
-- Evidence matrix, conservative abstention, Decimal arithmetic, pack normalization, tender-date expiry observations, and explicit FX rules.
-- Citation validation before accepting findings or drafting; submitted prices preserved.
-- Named local review gates, stale approval rejection, changed-source/draft detection, and prior run history.
-- Approved ZIP with an escaped offline HTML report, CSV matrix, JSON evidence/prices/exceptions, originals, and complete logs.
-- Hash-linked audit events with database triggers preventing routine edits or deletes.
-
-## Verification
-
-The final one-command check passed **40 tests with one observed expected failure** in 50.48 seconds. An actual structured-fixture MCP integration run invoked all four custom tools and borrowed Filesystem, produced **18 cited cells and nine price rows**, and completed in **13.52 seconds**. Five document-scoped Qwen workflows completed in **100.78–193.20 seconds**, each finding all seven gold source spans with correct addendum precedence. Their manual criteria produced 18 unresolved cells and no automatic price checks. Automated approvals are labelled **TEST SIMULATION**; actual human review remains required. See [EVALS.md](EVALS.md).
-
 ```powershell
-./scripts/start.ps1 -CheckOnly
-uv run python -m scripts.mcp_smoke
+./scripts/start.ps1         # Windows PowerShell
 ```
 
-Test artifacts stay in ignored `outputs/`. Restricted Windows sandboxes can block SQLite/pytest temporary folders; the core suite was verified with approved local execution.
+The first run downloads about 16 MB of public OCDS data into ignored `local_data/` and builds a local index (about one minute). Skip it with `--no-public-data` or `-NoPublicData`; award history then reports `SOURCE_UNAVAILABLE` and the rest still runs.
 
-## Public reference and model
+Open **http://127.0.0.1:8000**, choose **Load synthetic case**, then:
 
-Selected reference: [KEMSA/OIT05/2024-2026](https://kemsa.go.ke/tender/view/kemsa-oit05-2024-2026), liquid dosage forms, inhalation products, and topical formulations. The archive marks it closed and lists two addenda. The archive and extension notice disagree on the exact closing date; original/addendum retrieval encounters timeouts. [Reference notes](docs/REFERENCE_CASE.md) retain the discrepancy and known URLs. No finding is claimed against that tender.
+1. **Compile evaluation plan.** The agent writes its work plan, compiles the criteria and fetches the award history. Note the closing-date warning.
+2. Open citations, then **Review and lock plan** under your own name.
+3. **Evaluate synthetic bids.** Inspect the matrix, price checks and review queue.
+4. **Approve draft export** under your own name and download the package.
 
-The included tender, addendum, registrations, and bids are original synthetic fixtures, not transcriptions of the public reference. Their products are not asserted to be its actual schedule.
+Checks:
 
-Local Ollama and portable llama.cpp adapters record model/runtime identity, prompt/schema hashes, per-document usage, and immutable raw proposals. They validate sourced manual criteria. Original documents cannot claim supersession; an addendum quotation must explicitly name the criterion it replaces. Signed Ollama 0.40.3 successfully serves the pinned Qwen GGUF on CPU. A stronger-model bake-off remains outstanding. See [model setup](docs/MODEL_SETUP.md).
+```bash
+./scripts/start.sh --check                 # or ./scripts/start.ps1 -CheckOnly
+uv run python -m scripts.mcp_smoke         # full agent run over real MCP stdio transport
+```
 
-## Current limitations
+## How the agent works
 
-- OCR is unconfigured. Image-only pages become `OCR_FAILED`; findings remain unresolved. A genuinely scanned fixture demonstrates this failure.
-- Public PDF criteria are model-proposed manual rules. A human must verify completeness and define any deterministic mappings before locking them.
-- Native/unstructured bid interpretation is manual/unresolved; deterministic extraction works on the included structured synthetic bids.
-- Allowlisted public adapters retain retrieval/status metadata but do not yet parse verified PPB/debarment records or dated comparable benchmarks. Portal availability never establishes a registry match; all current reference checks remain unresolved.
-- Weighted scoring is rejected. Plan edits preserve history and rerun the whole case rather than only affected checks.
-- Graph checkpoints are in memory; durable case state reconstructs gates after restart. In-flight model calls are not resumed byte for byte.
-- Reviewer names are local demo attestations, not enterprise authentication. Session/origin/host checks stop routine cross-origin actions; a machine administrator can modify local files/database. No production readiness is claimed.
+LangGraph runs these nodes ([orchestrator/workflow.py](orchestrator/workflow.py)):
+
+1. **inspect**: reads the case manifest through the borrowed Filesystem MCP server and writes a work plan with reasons to the audit log. If the borrowed server is down, it plans from the local store and records that.
+2. **compile**: calls `compile_evaluation_plan`. With a local model, a rejected proposal (for example a quotation that is not on the cited page) is retried up to three times, and each retry receives the validator's error. After the limit the agent stops in `HUMAN_RECOVERY_REQUIRED`; it never invents criteria.
+3. **award_history** (only when a reference OCID is linked): calls `search_award_history` and compares the declared closing date with the published one.
+4. **named plan approval**: pauses until a person locks the exact plan digest.
+5. **evaluate** then **draft**: evidence matrix, price checks, unsigned package.
+6. **named export approval**: pauses until a person approves the exact draft digest.
+
+The planner is rule-based on purpose. A 1.5B local model is not reliable enough to choose tools, and a rule leaves a readable reason in the log.
+
+### MCP tools
+
+Built ([mcp_server/server.py](mcp_server/server.py), stdio):
+
+| Tool | Does |
+| --- | --- |
+| `register_case` | Hashes and extracts every document; writes the versioned manifest |
+| `compile_evaluation_plan` | Writes a draft plan whose every criterion quotes its source page; accepts validator feedback for retries |
+| `search_award_history` | Searches Kenya OCDS by OCID or keywords; returns cited awards with data-quality flags; with a case, saves a cited annex |
+| `evaluate_bid_pack` | Writes the evidence matrix and price observations against the locked plan only |
+| `draft_evaluation_file` | Writes the unsigned report, CSV matrix, JSON evidence, award history annex and review queue |
+
+Approval is deliberately not an MCP tool. Only the local UI can lock a plan or approve export.
+
+Borrowed: the official [`@modelcontextprotocol/server-filesystem`](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem) `read_text_file`, scoped to one case folder. Its path validation is already reviewed and maintained; writing our own file server would add risk for no gain.
+
+### Messy public data, handled
+
+The registry documents the defects; the tool flags them rather than cleaning them silently:
+
+- Supplier names with list numbers (`"17.\tLaboratory & Allied Ltd"`): normalized, published name kept, flagged.
+- Zero, missing, or top-1% award values: flagged and excluded from statistics, still shown.
+- Tender periods whose start is after their end: flagged.
+- Supplier identifiers use the portal's internal `Bidders` scheme, so they cannot prove legal identity. No identity matching is attempted.
+- Parties carry personal contact details. They are dropped at index time and never stored.
+
+Every value cites the source file SHA-256, line number, OCID, release ID and JSON pointer.
+
+## Open-weights model
+
+Qwen2.5-1.5B-Instruct Q4_K_M (Apache 2.0, publisher checksum verified) served by Ollama on CPU. Windows setup: `./scripts/start.ps1 -WithOllama`, then enter `tender-qwen:1.5b-q4` in the extraction settings. On macOS or Linux, install Ollama, import or pull a Qwen model, and set `TENDER_LOCAL_MODEL_URL`. Details: [docs/MODEL_SETUP.md](docs/MODEL_SETUP.md).
+
+The model only proposes criteria with quotations. Code verifies each quotation against the page, binds the document hash, and keeps every method manual until a person maps it. Arithmetic and approvals never go to the model.
+
+## Measured results
+
+See [EVALS.md](EVALS.md). Summary as of 15 October 2026:
+
+- Test suite: **48 passed, 1 expected failure** (scanned-page OCR), 90 seconds.
+- Full agent run over real MCP transport with real OCDS data, four repeats: 5 custom tools plus the borrowed server, 18 cited evidence cells, 9 price rows, 1 closing-date discrepancy cited to the OCDS record, audit chain valid, 29.89 to 56.27 seconds, identical results.
+- Three Qwen workflows through this graph: all exported, 7/7 gold source spans, correct addendum precedence, first-attempt success, 193.06 to 225.00 seconds (119.5 to 156.0 s of model inference, 898 identical output tokens each). Five earlier runs on 11 October: 100.78 to 193.20 seconds.
+- The retry loop is covered by tests with a deliberately wrong simulated model; Qwen has not yet failed validation in a real run, so the loop has not been observed live.
+- Cost per run: no hosted API. CPU time on a 16 GB laptop; electricity not measured.
+
+## Not finished
+
+- **No OCR.** Image-only pages become `OCR_FAILED` and stay unresolved (a strict expected-failure test).
+- **Real tender PDFs not used.** The KEMSA portal timed out for the original and both addenda. The closing date is now cross-checked against OCDS (archive page 12 November 2024, OCDS 13 November 2024) and left for a human to resolve.
+- **No unit-price benchmark.** The public data has no item lines.
+- **Registry checks are stubs.** Pharmacy and Poisons Board and debarment lookups stay `UNRESOLVED`; no verified records are parsed.
+- **Practitioner review pending.** The workflow has not yet been reviewed by a working procurement officer.
+- **Stronger-model comparison not done.**
+- **`start.sh` is tested under Git Bash on Windows only**, not on macOS or Linux.
+- Reviewer names are local attestations, not authentication. Graph checkpoints are in memory; case state in SQLite rebuilds the gates after a restart.
 
 ## Data and licence
 
-Use only closed public tenders and clearly labelled synthetic bids. Embedded URLs/instructions are never followed. Original documents stay unchanged. Advisory references cannot introduce unpublished criteria.
+Code: MIT. Bids, criteria and products in `sample_case/` are original synthetic fixtures, not transcriptions of any real tender. OCDS data is downloaded at setup and never committed; the registry lists no licence for this publication. Never use a live tender or personal details. Ignored folders: `local_data/`, `models/`, `.runtime/`, `outputs/`, `.env`.
 
-Original code is MIT licensed. External documents, models, packages, and registers keep their own licences. Do not redistribute data without permission. `local_data/`, `models/`, `.runtime/`, `.env`, and `outputs/` are ignored. The user authorized the public [Morio-mtrue/health-commodity-tender-agent repository](https://github.com/Morio-mtrue/health-commodity-tender-agent). No external dataset is redistributed.
-
-## Submission status
-
-The user explicitly waived build-start confirmation and authorized implementation. Organizer timing has not been certified.
-
-Still required: retrieve/reconcile the public tender and every addendum; select actual schedule lines; practitioner review and actual human approvals; a stronger-model comparison; clean-machine setup check; and an unedited public video under three minutes. Five-run measurements are tracked in EVALS.md. The public repository is created and published. See [inputs](docs/INPUTS.md), the [review checklist](docs/REVIEW_CHECKLIST.md), and the [submission draft](docs/SUBMISSION.md).
+More: [ARCHITECTURE.md](ARCHITECTURE.md), [EVALS.md](EVALS.md), [tool contracts](docs/TOOL_CONTRACTS.md), [reference case](docs/REFERENCE_CASE.md), [submission text](docs/SUBMISSION.md).
