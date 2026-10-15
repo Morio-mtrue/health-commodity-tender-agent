@@ -33,5 +33,3 @@ models/
 Thumbs.db
 .DS_Store
 
-# Local preview configuration
-.claude/

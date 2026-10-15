@@ -111,8 +111,17 @@ See [EVALS.md](EVALS.md). Summary as of 15 October 2026:
 - **`start.sh` is tested under Git Bash on Windows only**, not on macOS or Linux.
 - Reviewer names are local attestations, not authentication. Graph checkpoints are in memory; case state in SQLite rebuilds the gates after a restart.
 
+## Team
+
+| Name | GitHub |
+| --- | --- |
+| Njoroge Ngumi | [@Morio-mtrue](https://github.com/Morio-mtrue) |
+| Bill Abiola | [@Ollah28](https://github.com/Ollah28) |
+
+A team of two (the challenge allows up to three). This is the team's only entry, submitted under the Governance track's Health commodity tenders theme.
+
 ## Data and licence
 
 Code: MIT. Bids, criteria and products in `sample_case/` are original synthetic fixtures, not transcriptions of any real tender. OCDS data is downloaded at setup and never committed; the registry lists no licence for this publication. Never use a live tender or personal details. Ignored folders: `local_data/`, `models/`, `.runtime/`, `outputs/`, `.env`.
 
-More: [ARCHITECTURE.md](ARCHITECTURE.md), [EVALS.md](EVALS.md), [tool contracts](docs/TOOL_CONTRACTS.md), [reference case](docs/REFERENCE_CASE.md), [submission text](docs/SUBMISSION.md).
+More: [technical guide](docs/TECHNICAL_GUIDE.md), [ARCHITECTURE.md](ARCHITECTURE.md), [EVALS.md](EVALS.md), [tool contracts](docs/TOOL_CONTRACTS.md), [reference case](docs/REFERENCE_CASE.md), [submission text](docs/SUBMISSION.md).

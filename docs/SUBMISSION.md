@@ -43,6 +43,8 @@ Do not cut processing time out and still call it unedited. If you overrun, drop 
 
 ## Links to fill
 
+- Team members on the form: Njoroge Ngumi (@Morio-mtrue) and Bill Abiola (@Ollah28)
+
 - Code: https://github.com/Morio-mtrue/health-commodity-tender-agent
 - Video: pending recording
 - Practitioner conversation: pending
