@@ -119,6 +119,9 @@ def test_missing_mandatory_evidence_is_cited(service):
     finding=next(f for f in run["findings"] if f["bidder_id"]=="BID_B" and f["criterion_id"]=="P02")
     assert finding["status"]=="UNSUPPORTED"
     assert "manufacturing certificate" in finding["citations"][0]["quote"]
+    # The adverse observation also cites the bid that was searched, not only the requirement.
+    bid=next(d for d in case["documents"] if d["bidder_id"]=="BID_B")
+    assert any(c["document_id"]==bid["id"] and c["sha256"]==bid["sha256"] for c in finding["citations"][1:])
     assert run["source_manifest"]
 
 

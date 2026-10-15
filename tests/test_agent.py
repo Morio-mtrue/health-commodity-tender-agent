@@ -192,3 +192,11 @@ async def test_native_tender_without_model_stops_after_one_attempt(service):
     case = await workflow.advance(case["id"])
     assert case["state"] == "HUMAN_RECOVERY_REQUIRED" and case["recovery"]["attempts"] == 1
     assert "no local model" in case["work_plan"]["reasons"][0]
+
+
+def test_positional_case_id_is_logged_against_the_case(service, ocds_index):
+    # The MCP server once passed case_id positionally, which filed the event under the annex ID.
+    case = service.register_case(request())
+    service.search_award_history("", "", "", 10, case["id"])
+    events = [e for e in service.store.events(case["id"]) if e["tool"] == "search_award_history"]
+    assert [e["status"] for e in events] == ["STARTED", "SUCCESS"]

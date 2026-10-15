@@ -94,7 +94,7 @@ The model only proposes criteria with quotations. Code verifies each quotation a
 
 See [EVALS.md](EVALS.md). Summary as of 15 October 2026:
 
-- Test suite: **48 passed, 1 expected failure** (scanned-page OCR), 90 seconds.
+- Test suite: **49 passed, 1 expected failure** (scanned-page OCR).
 - Full agent run over real MCP transport with real OCDS data, four repeats: 5 custom tools plus the borrowed server, 18 cited evidence cells, 9 price rows, 1 closing-date discrepancy cited to the OCDS record, audit chain valid, 29.89 to 56.27 seconds, identical results.
 - Three Qwen workflows through this graph: all exported, 7/7 gold source spans, correct addendum precedence, first-attempt success, 193.06 to 225.00 seconds (119.5 to 156.0 s of model inference, 898 identical output tokens each). Five earlier runs on 11 October: 100.78 to 193.20 seconds.
 - The retry loop is covered by tests with a deliberately wrong simulated model; Qwen has not yet failed validation in a real run, so the loop has not been observed live.

@@ -6,7 +6,7 @@ Everything below was observed on one Windows 11 laptop (about 15.7 GiB RAM, CPU 
 
 | Check | Result |
 | --- | --- |
-| Test suite (`./scripts/start.ps1 -CheckOnly` or `pytest -q`) | **48 passed, 1 strict expected failure**, 90.40 s |
+| Test suite (`./scripts/start.ps1 -CheckOnly` or `pytest -q`) | **49 passed, 1 strict expected failure**, 11.92 s on the final run (90.40 s earlier under load) |
 | Full agent run over real MCP stdio with real OCDS data (`scripts.mcp_smoke`) | PASS in 4 of 4 runs, 29.89 s to 56.27 s, identical results |
 | Qwen2.5-1.5B workflows through the new graph (`scripts.model_eval --native-text --repeats 3`) | **3 of 3 exported**, 7/7 gold source spans each, correct addendum precedence, first-attempt success, 193.06 s to 225.00 s per full workflow |
 | Unfixed failure | Image-only scanned page: no OCR (strict XFAIL) |
@@ -23,7 +23,7 @@ Each row is an automated test in `tests/`. PASS means the assertion held in the 
 | 3 | Unsourced supersession cannot hide a criterion | PASS | Rejected unless the addendum quote names it |
 | 4 | Inactive flag cannot hide an unsuperseded rule | PASS | Revision rejected |
 | 5 | Model quotation bound to its registered source | PASS | Invented quote rejected; hash from manifest |
-| 6 | Mandatory certificate absent | PASS | Cited absence for BID_B P02; nothing invented |
+| 6 | Mandatory certificate absent | PASS | BID_B P02 cites the requirement and every bid page that was searched (document hash and page); nothing invented |
 | 7 | Ambiguous equivalent strength | PASS | UNRESOLVED with tender and bid citations |
 | 8 | Pack normalization and price discrepancy | PASS | Submitted 59,000 preserved; calculated 60,000; 1.2 KES/mL |
 | 9 | Currency conversion needs a published rule | PASS | Missing rule abstains; explicit rule computes |
@@ -53,9 +53,19 @@ Each row is an automated test in `tests/`. PASS means the assertion held in the 
 | 33 | **Compile retry with validator feedback** | PASS | Bad quote rejected; second attempt receives the error and succeeds; one RETRY event logged |
 | 34 | **Retry limit reached** | PASS | Three attempts, then HUMAN_RECOVERY_REQUIRED; no plan invented |
 | 35 | **Native tender with no model** | PASS | One attempt, then stops with the reason |
-| 36 | Image-only scanned certificate | **XFAIL** | No native text; OCR not configured |
+| 36 | **Every tool call logged against its case** | PASS | A positional case ID still files the event under the case, so the exported log includes `search_award_history` |
+| 37 | Image-only scanned certificate | **XFAIL** | No native text; OCR not configured |
 
 Rows 33 and 34 use a simulated model that returns a wrong quotation on purpose. That is the only way to force the failure deterministically, and it means the retry loop is tested, not observed with Qwen.
+
+## Defects found in the final review (15 October 2026, 22:30 EAT)
+
+A manual walk-through of the exported package found two defects, both fixed with regression tests (rows 6 and 36) that fail on the earlier code:
+
+- The MCP server passed `case_id` positionally to `search_award_history`, so its audit event was filed under the annex ID and left out of the case's exported log. The decorator now finds the case ID in any position, and the server passes keywords.
+- An absence finding against a bidder cited only the tender requirement. It now also cites each searched bid page, so the adverse observation names its source.
+
+A real MCP run after the fix (26.55 s) shows `search_award_history` STARTED and SUCCESS in the case log and BID_B P02 citing `doc_001` and `doc_004`.
 
 ## Full agent run over real MCP transport
 

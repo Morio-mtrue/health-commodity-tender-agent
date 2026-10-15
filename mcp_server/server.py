@@ -25,7 +25,7 @@ def search_award_history(ocid: str = "", query: str = "", buyer: str = "", limit
     Returns contract-level awards with data-quality flags and a file/line/JSON-pointer citation for each value.
     With case_id, saves the result to the case as a cited annex and compares the declared closing date with the
     published one. Never produces a unit-price benchmark or a finding against a supplier."""
-    return service.search_award_history(ocid, query, buyer, limit, case_id)
+    return service.search_award_history(ocid=ocid, query=query, buyer=buyer, limit=limit, case_id=case_id)
 
 
 @mcp.tool()

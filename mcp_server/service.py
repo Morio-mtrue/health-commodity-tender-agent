@@ -42,7 +42,8 @@ def audited(function):
             inputs = redact(inputs)
         except Exception:
             inputs = {"invalid_input": True}
-        case_id = kwargs.get("case_id") or (args[0] if args and isinstance(args[0],str) and args[0].startswith("case_") else None)
+        # Attribute the call to its case wherever the case ID appears, keyword or positional.
+        case_id = kwargs.get("case_id") or next((a for a in args if isinstance(a,str) and a.startswith("case_")), None)
         with self.store.lock:
             self.store.event(function.__name__, case_id, inputs, None, "STARTED", call_id=call_id, started_at=started)
             try:
@@ -265,6 +266,10 @@ class ProcurementService:
                 if len(values) > 1:
                     status, claim = "UNRESOLVED", "Multiple submitted documents contain competing evidence; human review is required."
                 elif not values:
+                    # An absence is only defensible if the finding cites every bid page that was searched.
+                    citations += [Citation(document_id=d["id"], sha256=d["sha256"], page=p["page"],
+                                           section="Inspected submitted content", quote=p["text"])
+                                  for d in docs for p in d["extraction"]["pages"] if p["text"].strip()]
                     parser_failed = any(not d["extraction"]["pages"] or d["extraction"]["warnings"] for d in docs)
                     if parser_failed or c.method == "manual" or not all(d["extraction"].get("structured") for d in docs):
                         status, claim = "UNRESOLVED", "Extraction is incomplete or evidence requires manual review; absence cannot be established."
